@@ -1,0 +1,27 @@
+# Специфично для .NET (Build и Publish)
+bin/
+obj/
+publish/
+*.exe
+*.dll
+*.pdb
+*.user
+*.suo
+
+# Базы данных и Docker
+.db/
+postgres-data/
+*.log
+
+# JetBrains Rider / IntelliJ
+.idea/
+*.sln.iml
+.vs/
+
+# Секреты и настройки (если будешь использовать)
+appsettings.Development.json
+*.pfx
+
+# Операционная система
+.DS_Store
+Thumbs.db
