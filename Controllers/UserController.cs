@@ -52,4 +52,25 @@ public class UserController : ControllerBase
 
         return Ok(user);
     }
+
+    [HttpGet("/user/search")]
+    public async Task<IActionResult> Search([FromQuery] string firstName, [FromQuery] string lastName)
+    {
+        // Валидация: если параметры пустые, лучше не нагружать базу полным сканированием
+        if (string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(lastName))
+        {
+            return BadRequest("firstName and lastName are required");
+        }
+
+        try
+        { 
+            var users = await _repository.Search(firstName, lastName);
+            return Ok(users);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, "Internal server error during search");
+        }
+    }
+
 }

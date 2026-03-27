@@ -10,7 +10,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 string connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Default") 
-                          ?? "Host=localhost;Database=otus_db;Username=postgres;Password=my_pass";
+                          ?? "Host=localhost;Database=otus_db;Username=postgres;Password=my_pass;";
 
 builder.Services.AddSingleton(new UserRepository(connectionString));
 

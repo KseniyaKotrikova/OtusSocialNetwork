@@ -60,6 +60,41 @@ public class UserRepository
 
         return null;
     }
-    // Здесь же будет метод Search с вашим LIKE запросом
+    public async Task<List<UserResponse>> Search(string firstName, string lastName)
+    {
+        var users = new List<UserResponse>();
+        using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync();
+    
+        // Обязательно добавляем % к параметрам для поиска по префиксу
+        // Сортировка по id — требование ДЗ
+        var sql = @"SELECT id, first_name, second_name, birthdate, biography, city, gender 
+                    FROM users 
+                    WHERE first_name LIKE @f AND second_name LIKE @l 
+                    ORDER BY id 
+                    LIMIT 50";
+    
+        using var cmd = new NpgsqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("f", firstName + "%");
+        cmd.Parameters.AddWithValue("l", lastName + "%");
+    
+         using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            users.Add(new UserResponse
+            (
+                reader.GetGuid(0).ToString(),
+                reader.GetString(1),
+                reader.GetString(2),
+                reader.GetDateTime(3),
+                reader.IsDBNull(4) ? "" : reader.GetString(4),
+                reader.IsDBNull(5) ? "" : reader.GetString(5),
+                reader.IsDBNull(6) ? "" : reader.GetString(6)
+            ));
+        }
+    
+        return users;
+    }
+    
 }
 
