@@ -1,22 +1,28 @@
 using OtusSocialNetwork.DTO;
-
-namespace OtusSocialNetwork.Repositories;
 using Npgsql;
 using System.Data;
 
+namespace OtusSocialNetwork.Repositories;
+
 public class UserRepository
 {
-    private readonly string _connectionString;
+    private readonly IDbConnectionStringProvider _connectionStringProvider;
 
-    public UserRepository(string connectionString) => _connectionString = connectionString;
+    public UserRepository(IDbConnectionStringProvider connectionStringProvider)
+    {
+        _connectionStringProvider = connectionStringProvider;
+    }
 
     public async Task<string?> Register(UserRegisterRequest req, string passwordHash)
     {
-        using var conn = new NpgsqlConnection(_connectionString);
+        using var conn = new NpgsqlConnection(_connectionStringProvider.GetConnectionString());
         await conn.OpenAsync();
-        var sql = @"INSERT INTO users (first_name, second_name, birthdate, biography, city, password_hash, gender) 
-                    VALUES (@f, @s, @b, @bio, @c, @ph, @g) RETURNING id";
+        
+        var sql = @"INSERT INTO users (id, first_name, second_name, birthdate, biography, city, password_hash, gender) 
+                    VALUES (@id, @f, @s, @b, @bio, @c, @ph, @g) RETURNING id";
+                    
         using var cmd = new NpgsqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("id", Guid.NewGuid()); // Генерируем UUID
         cmd.Parameters.AddWithValue("f", req.first_name);
         cmd.Parameters.AddWithValue("s", req.second_name);
         cmd.Parameters.AddWithValue("b", req.birthdate);
@@ -24,21 +30,24 @@ public class UserRepository
         cmd.Parameters.AddWithValue("c", req.city ?? "");
         cmd.Parameters.AddWithValue("ph", passwordHash);
         cmd.Parameters.AddWithValue("g", req.gender ?? "");
+        
         return (await cmd.ExecuteScalarAsync())?.ToString();
     }
 
     public async Task<string?> GetPasswordHash(Guid id)
     {
-        using var conn = new NpgsqlConnection(_connectionString);
+        using var conn = new NpgsqlConnection(_connectionStringProvider.GetConnectionString());
         await conn.OpenAsync();
+        
         using var cmd = new NpgsqlCommand("SELECT password_hash FROM users WHERE id = @id", conn);
         cmd.Parameters.AddWithValue("id", id);
+        
         return await cmd.ExecuteScalarAsync() as string;
     }
 
     public async Task<UserResponse?> GetUserById(Guid id)
     {
-        using var conn = new NpgsqlConnection(_connectionString);
+        using var conn = new NpgsqlConnection(_connectionStringProvider.GetConnectionString());
         await conn.OpenAsync();
 
         using var cmd = new NpgsqlCommand("SELECT id, first_name, second_name, birthdate, biography, city, gender FROM users WHERE id = @id", conn);
@@ -48,7 +57,8 @@ public class UserRepository
         if (await reader.ReadAsync())
         {
             return new UserResponse
-            (reader.GetGuid(0).ToString(),
+            (
+                reader.GetGuid(0).ToString(),
                 reader.GetString(1),
                 reader.GetString(2),
                 reader.GetDateTime(3),
@@ -60,14 +70,13 @@ public class UserRepository
 
         return null;
     }
+
     public async Task<List<UserResponse>> Search(string firstName, string lastName)
     {
         var users = new List<UserResponse>();
-        using var conn = new NpgsqlConnection(_connectionString);
+        using var conn = new NpgsqlConnection(_connectionStringProvider.GetConnectionString());
         await conn.OpenAsync();
     
-        // Обязательно добавляем % к параметрам для поиска по префиксу
-        // Сортировка по id — требование ДЗ
         var sql = @"SELECT id, first_name, second_name, birthdate, biography, city, gender 
                     FROM users 
                     WHERE first_name LIKE @f AND second_name LIKE @l 
@@ -78,7 +87,7 @@ public class UserRepository
         cmd.Parameters.AddWithValue("f", firstName + "%");
         cmd.Parameters.AddWithValue("l", lastName + "%");
     
-         using var reader = await cmd.ExecuteReaderAsync();
+        using var reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {
             users.Add(new UserResponse
@@ -95,6 +104,4 @@ public class UserRepository
     
         return users;
     }
-    
 }
-

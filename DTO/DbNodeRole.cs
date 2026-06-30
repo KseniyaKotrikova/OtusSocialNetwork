@@ -1,0 +1,1 @@
+public enum DbNodeRole { Master, Slave }

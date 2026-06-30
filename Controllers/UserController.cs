@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Mvc;
 using OtusSocialNetwork.DTO;
 using OtusSocialNetwork.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace OtusSocialNetwork.Controllers;
 
@@ -36,7 +37,7 @@ public class UserController : ControllerBase
     }
 
     [HttpGet("user/get/{id}")]
-    public async Task<IActionResult> GetUser(string id)
+    public async Task<IActionResult> GetUser(string id, ApplicationDbContext db)
     {
         if (!Guid.TryParse(id, out var guid))
         {
@@ -71,6 +72,21 @@ public class UserController : ControllerBase
         {
             return StatusCode(500, "Internal server error during search");
         }
+    }
+    
+    [HttpPost("/user/create")]
+    public async Task<IActionResult> CreateUser([FromBody] UserDto dto, [FromServices]ApplicationDbContext db)
+    {
+        // Запрос уйдет на Master
+        var user = new User
+        {
+            FirstName =  dto.FirstName, 
+            SecondName = dto.SecondName,
+            Biography =  dto.Biography,
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+        return Ok(user);
     }
 
 }
